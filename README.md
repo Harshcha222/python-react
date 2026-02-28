@@ -1,8 +1,7 @@
-# 📚 Library Management System
+# 📚 Library Management System (Flask Backend)
 
-A complete Library Management Web Application with **Python (Flask) backend** and **React (Vite) frontend**.
-Designed for librarians to efficiently manage books, members, transactions, and fees.
-Features role-based access control with separate UIs for librarians and library members.
+A simple and robust Library Management Web Application built using **Python (Flask)**.
+Designed for librarians to efficiently manage books, members, transactions, and book imports from the [Frappe Library API](https://frappe.io/api/method/frappe-library).
 
 ---
 
@@ -16,6 +15,7 @@ Features role-based access control with separate UIs for librarians and library 
 * Track transactions
 * Search books by title or author
 * Member debt check before issuing (limit ₹500)
+* Import books from external API (Frappe.io)
 
 ---
 
@@ -32,98 +32,36 @@ Features role-based access control with separate UIs for librarians and library 
 
 ---
 
-## 🎨 Frontend UI & Features
-
-### User Roles & Interfaces
-
-**Librarian View:**
-* Full Books catalog with Edit/Delete options
-* Add new books to library
-* Manage library members (Add/Edit/Delete)
-* Issue books to members
-* Process book returns and calculate fees
-* View complete transaction history
-* Track member debt
-
-**Member View:**
-* Browse available books (stock > 0)
-* View book details (title, author, stock, fee)
-* Limited to read-only access
-* Cannot see member management features
-
-### Frontend Security
-* JWT token stored in localStorage
-* Role extracted from JWT payload during login
-* Role-based UI rendering (conditional tabs & buttons)
-* All API requests include Authorization header with Bearer token
-* Frontend mirrors backend permission checks
-
----
-
 ## ⚙️ Tech Stack
 
-### Backend
 | Tool/Library       | Usage                         |
 | ------------------ | ----------------------------- |
 | Flask              | Web framework                 |
 | SQLAlchemy         | ORM for DB models             |
 | Flask-Migrate      | Database migrations           |
 | Flask-JWT-Extended | JWT-based authentication      |
-| Flask-CORS         | Cross-origin resource sharing |
-| MySQL              | Database                      |
-
-### Frontend
-| Tool/Library       | Usage                         |
-| ------------------ | ----------------------------- |
-| React 18.2         | UI framework                  |
-| Vite 5.4          | Build tool & dev server       |
-| JavaScript (JSX)   | Component logic               |
-| CSS                | Styling                       |
-| Fetch API          | HTTP requests to backend      |
-| JWT (localStorage) | Client-side token management  |
+| Requests           | Calling external API (Frappe) |
+|  MySQL     | Database                      |
 
 ---
 
 ## 📁 Folder Structure
 
-### Backend
 ```
 models/
 ├── model.py           # User, Book, Transaction models
 └── __init__.py        # DB & migrate setup
 
 routes/
-├── sign_up.py         # Login, member CRUD
+├── sign_up.py            # Login, member CRUD
 ├── books.py           # Book CRUD and search
-└── transactions.py    # Issue/return + fee logic
+├── transactions.py    # Issue/return + fee logic
+└── import_books.py    # Import books from Frappe API
 
-migrations/           # Database migration files
-app.py                # Main Flask app entry point
-config.py             # Configuration settings
-requirements.txt      # Python dependencies
-```
-
-### Frontend
-```
-frontend/
-├── public/            # Static assets
-├── src/
-│   ├── components/
-│   │   ├── Login.jsx              # Authentication with JWT role extraction
-│   │   ├── Books.jsx              # Books catalog (role-filtered view)
-│   │   ├── AddBook.jsx            # Add new book (librarian only)
-│   │   ├── UpdateBook.jsx         # Edit book details (librarian only)
-│   │   ├── Members.jsx            # Member management (librarian only)
-│   │   ├── SignUp.jsx             # Add new member (librarian only)
-│   │   ├── Transactions.jsx       # Issue/return books & history
-│   │   ├── IssueBook.jsx          # Book issue form (librarian only)
-│   │   └── ReturnBook.jsx         # Book return form (librarian only)
-│   ├── App.jsx                    # Main app shell with navigation
-│   ├── main.jsx                   # React initialization
-│   └── styles.css                 # Global styling
-├── index.html         # HTML entry point
-├── package.json       # Frontend dependencies
-└── vite.config.js     # Vite configuration
+app.py                 # Main app entry, blueprint registration
+.env                   # Environment variables
+requirements.txt       # Python dependencies
+README.md              # Project documentation
 ```
 
 ---
@@ -151,55 +89,17 @@ frontend/
 * **POST** `/transactions/return` *(Librarian only)*
 * **GET** `/transactions` *(Librarian only)*
 
----
+### 🌐 Import Books (`/import-books`)
 
-## 🔗 Frontend-Backend Integration
+* **POST** `/import-books`
+  **Body example:**
 
-### API Communication
-- **Base URL**: `http://localhost:5000`
-- **Headers**: All requests include `Authorization: Bearer <JWT_TOKEN>`
-- **Response Format**: `{ "status": "success/error", "message": "...", "data": {...} }`
-
-### Request Examples (from Frontend)
-
-**Login:**
-```javascript
-fetch('http://localhost:5000/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email, password })
-})
-```
-
-**Get Books:**
-```javascript
-fetch('http://localhost:5000/books/', {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  ```json
+  {
+    "count": 30,
+    "title": "Harry Potter"
   }
-})
-```
-
-**Issue Book:**
-```javascript
-fetch('http://localhost:5000/transactions/issue', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('token')}`
-  },
-  body: JSON.stringify({ member_id, book_id })
-})
-```
-
-### Token Management
-- JWT token stored in `localStorage.token` after successful login
-- Role extracted from JWT payload: `localStorage.userRole`
-- Role determines UI visibility:
-  - `role === 'librarian'`: Full UI with management features
-  - `role === 'member'`: Limited UI with read-only access
-- Token automatically included in all authenticated requests
+  ```
 
 ---
 
@@ -235,24 +135,21 @@ with app.app_context():
 
 ## ⚙️ Setup Instructions
 
-### Backend Setup
-
-1. **Clone & Install Python Dependencies**
+1. **Clone & Install**
 
    ```bash
    git clone <your-repo-url>
    cd <project-folder>
    python -m venv venv
-   venv\Scripts\activate  # Windows: or source venv/bin/activate (Mac/Linux)
+   venv\Scripts\activate  # or source venv/bin/activate
    pip install -r requirements.txt
    ```
 
 2. **Configure `.env`**
 
-   Create a `.env` file in the root directory:
    ```
    DATABASE_URL=mysql+pymysql://username:password@localhost/library_db
-   JWT_SECRET_KEY=your_secret_key_here
+   JWT_SECRET_KEY=your_secret_key
    ```
 
 3. **Database Migrations**
@@ -263,206 +160,68 @@ with app.app_context():
    flask db upgrade
    ```
 
-4. **Create Initial Librarian**
-
-   ```bash
-   python create_librarian.py
-   # Or manually via Flask shell:
-   flask shell
-   ```
-   
-   ```python
-   from app import app
-   from models.model import User
-   from models.__init__ import db
-   from werkzeug.security import generate_password_hash
-   
-   with app.app_context():
-       librarian = User(
-           name="Admin",
-           email="librarian@example.com",
-           role="librarian",
-           password_hash=generate_password_hash("admin123")
-       )
-       db.session.add(librarian)
-       db.session.commit()
-   ```
-
-5. **Run Backend Server**
+4. **Run the App**
 
    ```bash
    python app.py
    ```
-   
-   Backend will run at `http://localhost:5000`
 
-### Frontend Setup
-
-1. **Install Node.js & npm** (if not already installed)
-   - Download from [nodejs.org](https://nodejs.org/)
-   - Verify installation: `node --version && npm --version`
-
-2. **Install Frontend Dependencies**
-
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-3. **Run Frontend Development Server**
-
-   ```bash
-   npm run dev
-   ```
-   
-   Frontend will run at `http://localhost:5173`
-   - Browser will auto-open, or manually visit the URL
-   - Hot module reloading enabled for live edits
-
-### Running Both Simultaneously
-
-1. **Terminal 1 - Backend**
-   ```bash
-   python app.py
-   ```
-
-2. **Terminal 2 - Frontend**
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-3. **Access the Application**
-   - Open `http://localhost:5173` in your browser
-   - Login with test credentials:
-     - **Librarian**: `librarian@example.com` / `admin123`
-     - Create members as needed via signup endpoint or UI
+   The server will run at `http://127.0.0.1:5001`.
 
 ---
 
-## 📝 Using the Application
+## 📝 Postman Examples
 
-### Via React Frontend (Recommended)
-
-1. **Login Page**
-   - Enter email and password for librarian or member account
-   - JWT token automatically extracted and stored
-   - Role-based UI renders based on token claims
-
-2. **Librarian Dashboard**
-   - **Books Tab**: View all books, add new, edit, delete
-   - **Add Member Tab**: Create new library members
-   - **Members Tab**: View, edit, delete members with debt tracking
-   - **Transactions Tab**: Issue books, process returns, view history
-
-3. **Member Dashboard**
-   - **Books Tab**: Browse available books (stock > 0)
-   - Can see book details but cannot manage library
-
-### Via API (Postman/curl)
-
-> Use `Authorization: Bearer <TOKEN>` header for protected routes
+> Use `Authorization: Bearer <TOKEN>` for protected routes
 
 1. **Login**
+
    ```
-   POST http://localhost:5000/auth/login
-   Body: { "email": "librarian@example.com", "password": "admin123" }
-   Response: { "status": "success", "data": { "access_token": "..." } }
+   POST /auth/login
+   { "email": "librarian@example.com", "password": "admin123" }
    ```
 
-2. **Add Member** (Librarian only)
+2. **Add Member**
+
    ```
-   POST http://localhost:5000/auth/signup
-   Headers: Authorization: Bearer <TOKEN>
-   Body: { "name": "John Doe", "email": "john@example.com", "password": "123456" }
+   POST /auth/signup
+   { "name": "John Doe", "email": "john@example.com", "password": "123456" }
    ```
 
-3. **Get Books**
+3. **Add Book**
+
    ```
-   GET http://localhost:5000/books/
-   Query: ?title=Harry&author=Rowling
+   POST /books
+   { "title":"Atomic Habits","author":"James Clear","isbn":"1234567890123",
+     "publisher":"Penguin","pages":200,"stock":5,"per_day_fee":10 }
    ```
 
-4. **Add Book** (Librarian only)
+4. **Issue Book**
+
    ```
-   POST http://localhost:5000/books
-   Headers: Authorization: Bearer <TOKEN>
-   Body: {
-     "title":"Atomic Habits",
-     "author":"James Clear",
-     "isbn":"1234567890123",
-     "publisher":"Penguin",
-     "pages":200,
-     "stock":5,
-     "per_day_fee":10
-   }
+   POST /transactions/issue
+   { "member_id":1, "book_id":1 }
    ```
 
-5. **Issue Book** (Librarian only)
+5. **Return Book**
+
    ```
-   POST http://localhost:5000/transactions/issue
-   Headers: Authorization: Bearer <TOKEN>
-   Body: { "member_id": 1, "book_id": 1 }
+   POST /transactions/return
+   { "transaction_id":1 }
    ```
 
-6. **Return Book** (Librarian only)
+6. **Import Books**
+
    ```
-   POST http://localhost:5000/transactions/return
-   Headers: Authorization: Bearer <TOKEN>
-   Body: { "transaction_id": 1 }
+   POST /import-books
+   { "count":10, "title":"Harry Potter" }
    ```
 
 ---
 
-## 📋 Project Highlights
 
-✅ **Full-Stack Application**: Complete backend + frontend implementation
-✅ **Role-Based Access Control**: Different UIs for librarians and members
-✅ **JWT Authentication**: Secure token-based authentication with localStorage
-✅ **Responsive UI**: Clean, intuitive interface built with React
-✅ **CRUD Operations**: Complete management of books and members
-✅ **Transaction Tracking**: Issue/return books with fee calculation
-✅ **Debt Management**: Track member debt with ₹500 limit
 
-## 🛠️ Development Workflow
-
-### Making Frontend Changes
-```bash
-cd frontend
-npm run dev  # Frontend rebuilds on file save
-```
-
-### Making Backend Changes
-```bash
-# Backend auto-reloads with debug=True
-python app.py
-```
-
-### Building for Production
-```bash
-cd frontend
-npm run build  # Creates dist/ folder for deployment
-```
-
----
 
 ## 📋 License
 
 This project is for evaluation purposes only.
----
-
-## 🤖 AI Usage & Guidance
-
-AI assistance was used in a limited, supportive role during development.
-
-## Usage Scope
-- Generating repetitive boilerplate code
-- Suggesting minor refactors
-- Speeding up common CRUD patterns
-
-## Constraints
-- No core business logic was generated blindly
-- All AI-generated suggestions were reviewed before use
-- Application architecture was designed manually
-
-AI tools were treated as a productivity aid, not a decision-maker.
