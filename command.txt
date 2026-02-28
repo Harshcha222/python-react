@@ -1,0 +1,9 @@
+Database Migrations
+
+flask db init
+flask db migrate
+flask db upgrade
+
+Run the App
+
+python app.py
